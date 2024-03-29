@@ -4,13 +4,11 @@ use std::fmt;
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Arguments {
-    // TODO: figure out how to default to system preference
-    // https://www.perplexity.ai/search/How-can-I-zngZ7lVUQMWV13U92fmJXQ
     /// Sets the first day of the week. Accepts full names ('Sunday', 'Monday', etc.),
     /// their two-letter abbreviations ('Su', 'Mo', etc.), or numbers from 1 (Sunday) to 7 (Saturday).
     /// If not set, defaults to the system preference.
     #[arg(short, long, value_parser = parse_day)]
-    first_day_of_week: Option<String>,
+    first_day_of_week: Option<DayOfWeek>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -43,8 +41,18 @@ fn parse_day(s: &str) -> Result<DayOfWeek, String> {
     }
 }
 
+fn determine_default_first_day_of_week() -> DayOfWeek {
+    // TODO: figure out how to default to system preference
+    // https://www.perplexity.ai/search/How-can-I-zngZ7lVUQMWV13U92fmJXQ
+    DayOfWeek::Monday
+}
+
 fn main() {
-    let cli = Arguments::parse();
+    let args = Arguments::parse();
+
+    let first_day_of_week = args
+        .first_day_of_week
+        .unwrap_or_else(determine_default_first_day_of_week);
 }
 
 #[cfg(test)]
