@@ -119,6 +119,16 @@ impl Week {
             sunday: None,
         }
     }
+
+    fn is_empty(&self) -> bool {
+        self.monday.is_none()
+            && self.tuesday.is_none()
+            && self.wednesday.is_none()
+            && self.thursday.is_none()
+            && self.friday.is_none()
+            && self.saturday.is_none()
+            && self.sunday.is_none()
+    }
 }
 
 fn get_days_in_month(start_date: NaiveDate) -> Vec<NaiveDate> {
@@ -164,6 +174,10 @@ fn build_month(start_date: NaiveDate, first_day_of_week: Weekday) -> Month {
             weeks.push(current_week);
             current_week = Week::new();
         }
+    }
+
+    if !current_week.is_empty() {
+        weeks.push(current_week);
     }
 
     Month { start_date, weeks }
@@ -214,6 +228,7 @@ mod tests {
          5  6  7  8  9 10 11
         12 13 14 15 16 17 18
         19 20 21 22 23 24 25
+        26 27 28 29         
         "###);
     }
 }
