@@ -109,13 +109,10 @@ fn build_month(start_date: NaiveDate, first_day_of_week: Weekday) -> Month {
             Weekday::Sun => current_week.sunday = Some(day),
         }
 
-        let last_day_of_week = if first_day_of_week == Weekday::Sun && weekday == Weekday::Sat {
-            true
-        } else if first_day_of_week == Weekday::Mon && weekday == Weekday::Sun {
-            true
-        } else {
-            false
-        };
+        let last_day_of_week = matches!(
+            (first_day_of_week, weekday),
+            (Weekday::Sun, Weekday::Sat) | (Weekday::Mon, Weekday::Sun)
+        );
 
         if last_day_of_week {
             weeks.push(current_week);
