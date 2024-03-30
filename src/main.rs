@@ -56,36 +56,70 @@ fn determine_start_date(year: Option<i32>, month: Option<u32>) -> chrono::NaiveD
 #[derive(Debug)]
 struct Month {
     start_date: NaiveDate,
+    first_day_of_week: Weekday,
     weeks: Vec<Week>,
+}
+
+impl Month {
+    fn print(&self) -> String {
+        let start_date = self.start_date;
+
+        let mut output = String::new();
+
+        output.push_str(&format!(
+            "{:^20}\n",
+            format!("{} {}", start_date.format("%B"), start_date.year())
+        ));
+
+        match &self.first_day_of_week {
+            Weekday::Mon => {
+                output.push_str("Mo Tu We Th Fr Sa Su\n");
+
+                for week in &self.weeks {
+                    output.push_str(&format!(
+                        "{} {} {} {} {} {} {}\n",
+                        format_date(week.monday),
+                        format_date(week.tuesday),
+                        format_date(week.wednesday),
+                        format_date(week.thursday),
+                        format_date(week.friday),
+                        format_date(week.saturday),
+                        format_date(week.sunday)
+                    ));
+                }
+            }
+            Weekday::Sun => {
+                output.push_str("Su Mo Tu We Th Fr Sa\n");
+
+                for week in &self.weeks {
+                    output.push_str(&format!(
+                        "{} {} {} {} {} {} {}\n",
+                        format_date(week.sunday),
+                        format_date(week.monday),
+                        format_date(week.tuesday),
+                        format_date(week.wednesday),
+                        format_date(week.thursday),
+                        format_date(week.friday),
+                        format_date(week.saturday),
+                    ));
+                }
+            }
+
+            _ => {
+                panic!(
+                    "Invalid first day of week specified: {}",
+                    &self.first_day_of_week
+                );
+            }
+        };
+
+        output
+    }
 }
 
 impl fmt::Display for Month {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let start_date = self.start_date;
-
-        writeln!(
-            f,
-            "{:^20}",
-            format!("{} {}", start_date.format("%B"), start_date.year())
-        )?;
-        writeln!(f, "Mo Tu We Th Fr Sa Su")?;
-
-        for week in &self.weeks {
-            write!(
-                f,
-                "{} {} {} {} {} {} {}",
-                format_date(week.monday),
-                format_date(week.tuesday),
-                format_date(week.wednesday),
-                format_date(week.thursday),
-                format_date(week.friday),
-                format_date(week.saturday),
-                format_date(week.sunday)
-            )?;
-            writeln!(f)?;
-        }
-
-        Ok(())
+        write!(f, "{}", self.print())
     }
 }
 
@@ -180,7 +214,11 @@ fn build_month(start_date: NaiveDate, first_day_of_week: Weekday) -> Month {
         weeks.push(current_week);
     }
 
-    Month { start_date, weeks }
+    Month {
+        start_date,
+        first_day_of_week,
+        weeks,
+    }
 }
 
 fn main() {
@@ -191,7 +229,7 @@ fn main() {
 
     let month = build_month(start_date, first_day_of_week);
 
-    println!("{}", month)
+    println!("{}", month.print())
 }
 
 #[cfg(test)]
@@ -199,12 +237,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_build_month_simple() {
+    fn test_month_print_simple() {
         let start_date = NaiveDate::from_ymd_opt(2024, 3, 1).unwrap();
         let first_day_of_week = Weekday::Mon;
         let month = build_month(start_date, first_day_of_week);
 
-        insta::assert_snapshot!(month, @r###"
+        insta::assert_snapshot!(month.print(), @r###"
              March 2024     
         Mo Tu We Th Fr Sa Su
                      1  2  3
@@ -212,6 +250,24 @@ mod tests {
         11 12 13 14 15 16 17
         18 19 20 21 22 23 24
         25 26 27 28 29 30 31
+        "###);
+    }
+
+    #[test]
+    fn test_month_print_sun_first() {
+        let start_date = NaiveDate::from_ymd_opt(2024, 3, 1).unwrap();
+        let first_day_of_week = Weekday::Sun;
+        let month = build_month(start_date, first_day_of_week);
+
+        insta::assert_snapshot!(month.print(), @r###"
+             March 2024     
+        Su Mo Tu We Th Fr Sa
+                        1  2
+         3  4  5  6  7  8  9
+        10 11 12 13 14 15 16
+        17 18 19 20 21 22 23
+        24 25 26 27 28 29 30
+        31                  
         "###);
     }
 
