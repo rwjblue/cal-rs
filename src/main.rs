@@ -9,6 +9,12 @@ struct Arguments {
     /// Sets the first day of the week. If not set, defaults to the system preference.
     #[arg(short, long, value_enum)]
     first_day_of_week: Option<FirstDayOfWeek>,
+
+    #[arg(short, long)]
+    year: Option<i32>,
+
+    #[arg(short, long, value_parser = clap::value_parser!(u32).range(1..=12))]
+    month: Option<u32>,
 }
 
 #[derive(Clone, Debug, ValueEnum, PartialEq)]
@@ -39,11 +45,12 @@ fn determine_default_first_day_of_week(
 }
 
 // TODO: Update Arguments to allow forms of specifying which month/year to print
-fn determine_start_date() -> chrono::NaiveDate {
-    let today = chrono::Local::now().date_naive();
-
-    NaiveDate::from_ymd_opt(today.year(), today.month(), 1)
-        .expect("Couldn't determine the first day of the month!")
+fn determine_start_date(year: Option<i32>, month: Option<u32>) -> chrono::NaiveDate {
+    match (year, month) {
+        (Some(year), Some(month)) => NaiveDate::from_ymd_opt(year, month, 1)
+            .unwrap_or_else(|| panic!("Invalid year and month combination: {}-{:02}", year, month)),
+        _ => Local::now().date_naive().with_day(1).unwrap(),
+    }
 }
 
 #[derive(Debug)]
