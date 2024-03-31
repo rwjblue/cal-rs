@@ -32,14 +32,58 @@ impl From<FirstDayOfWeek> for chrono::Weekday {
     }
 }
 
+#[cfg(target_os = "macos")]
+fn get_system_default_first_workday() -> Option<Weekday> {
+    use plist::Value;
+
+    let plist_path = match home::home_dir() {
+        Some(mut path) => {
+            path.push("Library/Preferences/.GlobalPreferences.plist");
+            path
+        }
+        None => return None,
+    };
+
+    let plist = Value::from_file(plist_path).ok()?;
+
+    if let Some(dict) = plist.as_dictionary() {
+        if let Some(Value::Dictionary(calendars)) = dict.get("AppleFirstWeekday") {
+            if let Some(Value::Integer(first_weekday)) = calendars.get("gregorian") {
+                println!("First weekday: {:?}", first_weekday);
+
+                return match first_weekday.as_signed()? {
+                    1 => Some(Weekday::Sun),
+                    2 => Some(Weekday::Mon),
+                    _ => None,
+                };
+            }
+        }
+    } else {
+        // could not process the plist file as a dictionary, we shouldn't consider this a
+        // "succesful" read (which would default back to Sunday).
+        return None;
+    }
+
+    // On macOS the default is Sunday if not set via system preferences. When it is in its default
+    // value, the plist file will not contain the key `AppleFirstWeekday`.
+    Some(Weekday::Sun)
+}
+
+#[cfg(not(target_os = "macos"))]
+fn get_system_default_first_workday() -> Option<Weekday> {
+    None
+}
+
 fn determine_default_first_day_of_week(
     first_day_of_week: Option<FirstDayOfWeek>,
 ) -> chrono::Weekday {
     if let Some(first_day_of_week) = first_day_of_week {
         first_day_of_week.into()
     } else {
-        // TODO: figure out how to default to system preference
-        // https://www.perplexity.ai/search/How-can-I-zngZ7lVUQMWV13U92fmJXQ
+        if let Some(weekday) = get_system_default_first_workday() {
+            return weekday;
+        }
+
         Weekday::Mon
     }
 }

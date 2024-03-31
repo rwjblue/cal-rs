@@ -8,6 +8,7 @@ customize the first day of the week.
 
 - Display a calendar for a given month and year
 - Customize the first day of the week (Sunday or Monday)
+- On macOS the first day of the week is determined by the system preference (via System Settings > General > Language & Region > First day of week)
 - Automatically defaults to the current month and year if not specified
 
 ## Usage

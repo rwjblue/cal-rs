@@ -9,6 +9,8 @@ license = "MIT"
 [dependencies]
 chrono = "0.4.37"
 clap = { version = "4.5.4", features = ["derive"] }
+home = "0.5.9"
+plist = "1.6.1"
 
 [dev-dependencies]
 insta = { version = "1.38.0", features = ["yaml"] }
