@@ -9,7 +9,6 @@ customize the first day of the week.
 - Display a calendar for a given month and year
 - Customize the first day of the week (Sunday or Monday)
 - Automatically defaults to the current month and year if not specified
-- Supports leap years and correctly displays February with 29 days when applicable
 
 ## Usage
 
