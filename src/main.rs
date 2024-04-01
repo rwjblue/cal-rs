@@ -151,48 +151,24 @@ struct Month {
 }
 
 impl Month {
-    fn print(&self) -> String {
-        let start_date = self.start_date;
-
-        let mut output = String::new();
-
+    fn print_header(&self, output: &mut String) {
         output.push_str(&format!(
             "{:^20}\n",
-            format!("{} {}", start_date.format("%B"), start_date.year())
+            format!(
+                "{} {}",
+                self.start_date.format("%B"),
+                self.start_date.year()
+            )
         ));
+    }
 
+    fn print_weekday_header(&self, output: &mut String) {
         match &self.first_day_of_week {
             Weekday::Mon => {
                 output.push_str("Mo Tu We Th Fr Sa Su\n");
-
-                for week in &self.weeks {
-                    output.push_str(&format!(
-                        "{} {} {} {} {} {} {}\n",
-                        format_date(week.monday),
-                        format_date(week.tuesday),
-                        format_date(week.wednesday),
-                        format_date(week.thursday),
-                        format_date(week.friday),
-                        format_date(week.saturday),
-                        format_date(week.sunday)
-                    ));
-                }
             }
             Weekday::Sun => {
                 output.push_str("Su Mo Tu We Th Fr Sa\n");
-
-                for week in &self.weeks {
-                    output.push_str(&format!(
-                        "{} {} {} {} {} {} {}\n",
-                        format_date(week.sunday),
-                        format_date(week.monday),
-                        format_date(week.tuesday),
-                        format_date(week.wednesday),
-                        format_date(week.thursday),
-                        format_date(week.friday),
-                        format_date(week.saturday),
-                    ));
-                }
             }
 
             _ => {
@@ -202,6 +178,18 @@ impl Month {
                 );
             }
         };
+    }
+
+    fn print(&self) -> String {
+        let mut output = String::new();
+
+        self.print_header(&mut output);
+        self.print_weekday_header(&mut output);
+
+        for week in &self.weeks {
+            week.print(self.first_day_of_week, &mut output);
+            output.push('\n');
+        }
 
         output
     }
@@ -252,6 +240,39 @@ impl Week {
             && self.friday.is_none()
             && self.saturday.is_none()
             && self.sunday.is_none()
+    }
+
+    fn print(&self, first_day_of_week: Weekday, output: &mut String) {
+        match first_day_of_week {
+            Weekday::Mon => {
+                output.push_str(&format!(
+                    "{} {} {} {} {} {} {}",
+                    format_date(self.monday),
+                    format_date(self.tuesday),
+                    format_date(self.wednesday),
+                    format_date(self.thursday),
+                    format_date(self.friday),
+                    format_date(self.saturday),
+                    format_date(self.sunday)
+                ));
+            }
+            Weekday::Sun => {
+                output.push_str(&format!(
+                    "{} {} {} {} {} {} {}",
+                    format_date(self.sunday),
+                    format_date(self.monday),
+                    format_date(self.tuesday),
+                    format_date(self.wednesday),
+                    format_date(self.thursday),
+                    format_date(self.friday),
+                    format_date(self.saturday),
+                ));
+            }
+
+            _ => {
+                panic!("Invalid first day of week specified: {}", first_day_of_week);
+            }
+        };
     }
 }
 
