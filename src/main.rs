@@ -13,15 +13,15 @@ struct Arguments {
     #[arg(short, long)]
     year: Option<i32>,
 
-    #[arg(short, long, value_parser = clap::value_parser!(u8).range(1..=12))]
+    #[arg(short, long, value_parser = clap::value_parser!(u32).range(1..=12))]
     month: Option<u32>,
 
     /// Display the number of months after the current month.
-    #[arg(short = 'A', value_parser = clap::value_parser!(u8).range(1..=12))]
+    #[arg(short = 'A', value_parser = clap::value_parser!(u32).range(1..=12))]
     months_after: Option<u32>,
 
     /// Display the number of months before the current month.
-    #[arg(short = 'B', value_parser = clap::value_parser!(u8).range(1..=12))]
+    #[arg(short = 'B', value_parser = clap::value_parser!(u32).range(1..=12))]
     months_before: Option<u32>,
 }
 
@@ -122,8 +122,6 @@ fn determine_start_date(
 }
 
 fn determine_number_of_months(months_after: Option<u32>, months_before: Option<u32>) -> u32 {
-    let mut num_months = 1;
-
     let months_after = months_after.unwrap_or(0);
     let months_before = months_before.unwrap_or(0);
 
@@ -139,6 +137,52 @@ impl MonthRange {
     fn print(&self) -> String {
         let mut output = String::new();
 
+        for chunk in self.months.chunks(3) {
+            // print the month headers
+            for (index, month) in chunk.iter().enumerate() {
+                if index > 0 {
+                    output.push_str("  ");
+                }
+
+                month.print_header(&mut output);
+            }
+            output.push('\n');
+
+            // print the weekday headers
+            for (index, month) in chunk.iter().enumerate() {
+                if index > 0 {
+                    output.push_str("  ");
+                }
+
+                month.print_weekday_header(&mut output);
+            }
+            output.push('\n');
+
+            let max_weeks = self
+                .months
+                .iter()
+                .map(|month| month.weeks.len())
+                .max()
+                .unwrap_or(0);
+
+            for week_index in 0..max_weeks {
+                for (index, month) in chunk.iter().enumerate() {
+                    if index > 0 {
+                        output.push_str("  ");
+                    }
+
+                    let week = month.weeks.get(week_index);
+                    match week {
+                        Some(week) => week.print(month.first_day_of_week, &mut output),
+                        None => {
+                            output.push_str("                    ");
+                        }
+                    }
+                }
+                output.push('\n');
+            }
+        }
+
         output
     }
 }
@@ -153,7 +197,7 @@ struct Month {
 impl Month {
     fn print_header(&self, output: &mut String) {
         output.push_str(&format!(
-            "{:^20}\n",
+            "{:^20}",
             format!(
                 "{} {}",
                 self.start_date.format("%B"),
@@ -165,10 +209,10 @@ impl Month {
     fn print_weekday_header(&self, output: &mut String) {
         match &self.first_day_of_week {
             Weekday::Mon => {
-                output.push_str("Mo Tu We Th Fr Sa Su\n");
+                output.push_str("Mo Tu We Th Fr Sa Su");
             }
             Weekday::Sun => {
-                output.push_str("Su Mo Tu We Th Fr Sa\n");
+                output.push_str("Su Mo Tu We Th Fr Sa");
             }
 
             _ => {
@@ -184,7 +228,9 @@ impl Month {
         let mut output = String::new();
 
         self.print_header(&mut output);
+        output.push('\n');
         self.print_weekday_header(&mut output);
+        output.push('\n');
 
         for week in &self.weeks {
             week.print(self.first_day_of_week, &mut output);
@@ -418,6 +464,41 @@ mod tests {
         12 13 14 15 16 17 18
         19 20 21 22 23 24 25
         26 27 28 29         
+        "###);
+    }
+
+    #[test]
+    fn test_month_range_print_simple() {
+        let start_date = NaiveDate::from_ymd_opt(2024, 2, 1).unwrap();
+        let first_day_of_week = Weekday::Mon;
+        let month = build_month_range(start_date, first_day_of_week, 3);
+
+        insta::assert_snapshot!(month.print(), @r###"
+           February 2024           March 2024            April 2024     
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+                  1  2  3  4               1  2  3   1  2  3  4  5  6  7
+         5  6  7  8  9 10 11   4  5  6  7  8  9 10   8  9 10 11 12 13 14
+        12 13 14 15 16 17 18  11 12 13 14 15 16 17  15 16 17 18 19 20 21
+        19 20 21 22 23 24 25  18 19 20 21 22 23 24  22 23 24 25 26 27 28
+        26 27 28 29           25 26 27 28 29 30 31  29 30               
+        "###);
+    }
+
+    #[test]
+    fn test_month_range_print_sun_first() {
+        let start_date = NaiveDate::from_ymd_opt(2024, 2, 1).unwrap();
+        let first_day_of_week = Weekday::Sun;
+        let month = build_month_range(start_date, first_day_of_week, 3);
+
+        insta::assert_snapshot!(month.print(), @r###"
+           February 2024           March 2024            April 2024     
+        Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa
+                     1  2  3                  1  2      1  2  3  4  5  6
+         4  5  6  7  8  9 10   3  4  5  6  7  8  9   7  8  9 10 11 12 13
+        11 12 13 14 15 16 17  10 11 12 13 14 15 16  14 15 16 17 18 19 20
+        18 19 20 21 22 23 24  17 18 19 20 21 22 23  21 22 23 24 25 26 27
+        25 26 27 28 29        24 25 26 27 28 29 30  28 29 30            
+                              31                                        
         "###);
     }
 }
