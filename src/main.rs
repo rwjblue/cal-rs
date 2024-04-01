@@ -135,7 +135,11 @@ impl MonthRange {
     fn print(&self) -> String {
         let mut output = String::new();
 
-        for chunk in self.months.chunks(3) {
+        for (chunk_index, chunk) in self.months.chunks(3).enumerate() {
+            if chunk_index > 0 {
+                output.push('\n');
+            }
+
             // print the month headers
             for (index, month) in chunk.iter().enumerate() {
                 if index > 0 {
