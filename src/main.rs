@@ -13,8 +13,16 @@ struct Arguments {
     #[arg(short, long)]
     year: Option<i32>,
 
-    #[arg(short, long, value_parser = clap::value_parser!(u32).range(1..=12))]
+    #[arg(short, long, value_parser = clap::value_parser!(u8).range(1..=12))]
     month: Option<u32>,
+
+    /// Display the number of months after the current month.
+    #[arg(short = 'A', value_parser = clap::value_parser!(u8).range(1..=12))]
+    months_after: Option<u32>,
+
+    /// Display the number of months before the current month.
+    #[arg(short = 'B', value_parser = clap::value_parser!(u8).range(1..=12))]
+    months_before: Option<u32>,
 }
 
 #[derive(Clone, Debug, ValueEnum, PartialEq)]
@@ -89,11 +97,49 @@ fn determine_default_first_day_of_week(
 }
 
 // TODO: Update Arguments to allow forms of specifying which month/year to print
-fn determine_start_date(year: Option<i32>, month: Option<u32>) -> chrono::NaiveDate {
-    match (year, month) {
+fn determine_start_date(
+    year: Option<i32>,
+    month: Option<u32>,
+    months_before: Option<u32>,
+) -> chrono::NaiveDate {
+    let start_date = match (year, month) {
         (Some(year), Some(month)) => NaiveDate::from_ymd_opt(year, month, 1)
             .unwrap_or_else(|| panic!("Invalid year and month combination: {}-{:02}", year, month)),
         _ => Local::now().date_naive().with_day(1).unwrap(),
+    };
+
+    if let Some(months) = months_before {
+        let start_date = if start_date.month() <= months {
+            NaiveDate::from_ymd_opt(start_date.year() - 1, 12 - months + start_date.month(), 1)
+        } else {
+            NaiveDate::from_ymd_opt(start_date.year(), start_date.month() - months, 1)
+        }
+        .expect("Couldn't determine a valid start date");
+        return start_date;
+    }
+
+    start_date
+}
+
+fn determine_number_of_months(months_after: Option<u32>, months_before: Option<u32>) -> u32 {
+    let mut num_months = 1;
+
+    let months_after = months_after.unwrap_or(0);
+    let months_before = months_before.unwrap_or(0);
+
+    1 + months_before + months_after
+}
+
+#[derive(Debug)]
+struct MonthRange {
+    months: Vec<Month>,
+}
+
+impl MonthRange {
+    fn print(&self) -> String {
+        let mut output = String::new();
+
+        output
     }
 }
 
@@ -265,15 +311,37 @@ fn build_month(start_date: NaiveDate, first_day_of_week: Weekday) -> Month {
     }
 }
 
+fn build_month_range(
+    start_date: NaiveDate,
+    first_day_of_week: Weekday,
+    num_months: u32,
+) -> MonthRange {
+    let mut months = vec![];
+    let mut current_date = start_date;
+    for _ in 0..num_months {
+        let month = build_month(current_date, first_day_of_week);
+        months.push(month);
+        current_date = if current_date.month() == 12 {
+            NaiveDate::from_ymd_opt(current_date.year() + 1, 1, 1)
+        } else {
+            NaiveDate::from_ymd_opt(current_date.year(), current_date.month() + 1, 1)
+        }
+        .expect("Couldn't determine a valid end date");
+    }
+
+    MonthRange { months }
+}
+
 fn main() {
     let args = Arguments::parse();
 
     let first_day_of_week = determine_default_first_day_of_week(args.first_day_of_week);
-    let start_date = determine_start_date(args.year, args.month);
+    let start_date = determine_start_date(args.year, args.month, args.months_before);
+    let num_months = determine_number_of_months(args.months_after, args.months_before);
 
-    let month = build_month(start_date, first_day_of_week);
+    let months = build_month_range(start_date, first_day_of_week, num_months);
 
-    println!("{}", month.print())
+    println!("{}", months.print())
 }
 
 #[cfg(test)]
