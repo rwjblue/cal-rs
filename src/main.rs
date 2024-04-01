@@ -499,4 +499,26 @@ mod tests {
                               31                                        
         "###);
     }
+
+    #[test]
+    fn test_determine_start_date_no_args() {
+        let start_date = determine_start_date(None, None, None);
+
+        assert_eq!(start_date, Local::now().date_naive().with_day(1).unwrap());
+    }
+
+    #[test]
+    fn test_determine_start_date_with_months_before() {
+        let start_date = determine_start_date(None, None, Some(1));
+
+        assert_eq!(
+            start_date,
+            Local::now()
+                .date_naive()
+                .with_day(1)
+                .unwrap()
+                .checked_sub_months(chrono::Months::new(1))
+                .unwrap()
+        );
+    }
 }
