@@ -57,8 +57,6 @@ fn get_system_default_first_workday() -> Option<Weekday> {
     if let Some(dict) = plist.as_dictionary() {
         if let Some(Value::Dictionary(calendars)) = dict.get("AppleFirstWeekday") {
             if let Some(Value::Integer(first_weekday)) = calendars.get("gregorian") {
-                println!("First weekday: {:?}", first_weekday);
-
                 return match first_weekday.as_signed()? {
                     1 => Some(Weekday::Sun),
                     2 => Some(Weekday::Mon),
