@@ -91,6 +91,7 @@ dependencies = [
  "clap",
  "home",
  "insta",
+ "lazy_static",
  "plist",
 ]
 
