@@ -1,7 +1,14 @@
 use clap::{Parser, ValueEnum};
 use std::fmt;
+use std::io::IsTerminal;
 
 use chrono::prelude::*;
+
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref TODAY: NaiveDate = chrono::Local::now().date_naive();
+}
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -103,7 +110,7 @@ fn determine_start_date(
     let start_date = match (year, month) {
         (Some(year), Some(month)) => NaiveDate::from_ymd_opt(year, month, 1)
             .unwrap_or_else(|| panic!("Invalid year and month combination: {}-{:02}", year, month)),
-        _ => Local::now().date_naive().with_day(1).unwrap(),
+        _ => TODAY.with_day(1).unwrap(),
     };
 
     if let Some(months) = months_before {
@@ -251,7 +258,16 @@ impl fmt::Display for Month {
 
 fn format_date(date: Option<NaiveDate>) -> String {
     match date {
-        Some(d) => format!("{:2}", d.day()),
+        Some(d) => {
+            if std::io::stdout().is_terminal() && d == *TODAY {
+                let highlight_on = "\x1B[7m"; // ANSI code for reverse video on
+                let highlight_off = "\x1B[27m"; // ANSI code for reverse video off
+
+                format!("{}{:2}{}", highlight_on, d.day(), highlight_off)
+            } else {
+                format!("{:2}", d.day())
+            }
+        }
         None => "  ".to_string(),
     }
 }
