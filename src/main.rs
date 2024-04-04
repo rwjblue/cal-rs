@@ -259,7 +259,7 @@ impl fmt::Display for Month {
 fn format_date(date: Option<NaiveDate>) -> String {
     match date {
         Some(d) => {
-            if std::io::stdout().is_terminal() && d == *TODAY {
+            if is_interactive() && d == *TODAY {
                 let highlight_on = "\x1B[7m"; // ANSI code for reverse video on
                 let highlight_off = "\x1B[27m"; // ANSI code for reverse video off
 
@@ -270,6 +270,20 @@ fn format_date(date: Option<NaiveDate>) -> String {
         }
         None => "  ".to_string(),
     }
+}
+
+#[cfg(not(test))]
+fn is_interactive() -> bool {
+    std::io::stdout().is_terminal()
+}
+
+#[cfg(test)]
+fn is_interactive() -> bool {
+    // Default to false in tests, so that the tests are stable between `cargo test` (which run in
+    // interactive mode) and `cargo nextest run` (which runs in non-interactive mode).
+    //
+    // This ensures the tests are stable
+    false
 }
 
 #[derive(Debug)]
