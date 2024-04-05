@@ -19,11 +19,11 @@ struct Arguments {
     month: Option<u32>,
 
     /// Display the number of months after the current month.
-    #[arg(short = 'A', value_parser = clap::value_parser!(u32).range(1..=12))]
+    #[arg(short = 'A', long, value_parser = clap::value_parser!(u32).range(1..=12))]
     months_after: Option<u32>,
 
     /// Display the number of months before the current month.
-    #[arg(short = 'B', value_parser = clap::value_parser!(u32).range(1..=12))]
+    #[arg(short = 'B', long, value_parser = clap::value_parser!(u32).range(1..=12))]
     months_before: Option<u32>,
 }
 
@@ -521,6 +521,22 @@ mod tests {
         12 13 14 15 16 17 18  11 12 13 14 15 16 17  15 16 17 18 19 20 21
         19 20 21 22 23 24 25  18 19 20 21 22 23 24  22 23 24 25 26 27 28
         26 27 28 29           25 26 27 28 29 30 31  29 30               
+        "###);
+    }
+
+    #[test]
+    fn test_month_range_print_long_args() {
+        let current_date = NaiveDate::from_ymd_opt(2023, 3, 20).unwrap();
+        let args = args(["cal", "--months-before", "1", "--months-after", "1"]);
+
+        insta::assert_snapshot!(print(args, current_date), @r###"
+           February 2023           March 2023            April 2023     
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+               1  2  3  4  5         1  2  3  4  5                  1  2
+         6  7  8  9 10 11 12   6  7  8  9 10 11 12   3  4  5  6  7  8  9
+        13 14 15 16 17 18 19  13 14 15 16 17 18 19  10 11 12 13 14 15 16
+        20 21 22 23 24 25 26  20 21 22 23 24 25 26  17 18 19 20 21 22 23
+        27 28                 27 28 29 30 31        24 25 26 27 28 29 30
         "###);
     }
 
