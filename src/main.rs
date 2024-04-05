@@ -1,5 +1,6 @@
 use clap::{Parser, ValueEnum};
 use std::fmt;
+#[cfg(not(test))]
 use std::io::IsTerminal;
 
 use chrono::prelude::*;
