@@ -5,13 +5,7 @@ use std::io::IsTerminal;
 
 use chrono::prelude::*;
 
-use lazy_static::lazy_static;
-
-lazy_static! {
-    static ref TODAY: NaiveDate = chrono::Local::now().date_naive();
-}
-
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Arguments {
     /// Sets the first day of the week. If not set, defaults to the system preference.
@@ -102,8 +96,8 @@ fn determine_default_first_day_of_week(
     }
 }
 
-// TODO: Update Arguments to allow forms of specifying which month/year to print
 fn determine_start_date(
+    current_date: NaiveDate,
     year: Option<i32>,
     month: Option<u32>,
     months_before: Option<u32>,
@@ -111,7 +105,7 @@ fn determine_start_date(
     let start_date = match (year, month) {
         (Some(year), Some(month)) => NaiveDate::from_ymd_opt(year, month, 1)
             .unwrap_or_else(|| panic!("Invalid year and month combination: {}-{:02}", year, month)),
-        _ => TODAY.with_day(1).unwrap(),
+        _ => current_date.with_day(1).unwrap(),
     };
 
     if let Some(months) = months_before {
@@ -140,7 +134,7 @@ struct MonthRange {
 }
 
 impl MonthRange {
-    fn print(&self) -> String {
+    fn print(&self, current_date: NaiveDate) -> String {
         let mut output = String::new();
 
         for (chunk_index, chunk) in self.months.chunks(3).enumerate() {
@@ -183,7 +177,9 @@ impl MonthRange {
 
                     let week = month.weeks.get(week_index);
                     match week {
-                        Some(week) => week.print(month.first_day_of_week, &mut output),
+                        Some(week) => {
+                            week.print(current_date, month.first_day_of_week, &mut output)
+                        }
                         None => {
                             output.push_str("                    ");
                         }
@@ -234,7 +230,7 @@ impl Month {
         };
     }
 
-    fn print(&self) -> String {
+    fn print(&self, current_date: NaiveDate) -> String {
         let mut output = String::new();
 
         self.print_header(&mut output);
@@ -243,7 +239,7 @@ impl Month {
         output.push('\n');
 
         for week in &self.weeks {
-            week.print(self.first_day_of_week, &mut output);
+            week.print(current_date, self.first_day_of_week, &mut output);
             output.push('\n');
         }
 
@@ -253,14 +249,15 @@ impl Month {
 
 impl fmt::Display for Month {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.print())
+        let today = chrono::Local::now().date_naive();
+        write!(f, "{}", self.print(today))
     }
 }
 
-fn format_date(date: Option<NaiveDate>) -> String {
+fn format_date(current_date: NaiveDate, date: Option<NaiveDate>) -> String {
     match date {
         Some(d) => {
-            if is_interactive() && d == *TODAY {
+            if is_interactive() && d == current_date {
                 let highlight_on = "\x1B[7m"; // ANSI code for reverse video on
                 let highlight_off = "\x1B[27m"; // ANSI code for reverse video off
 
@@ -321,30 +318,30 @@ impl Week {
             && self.sunday.is_none()
     }
 
-    fn print(&self, first_day_of_week: Weekday, output: &mut String) {
+    fn print(&self, current_date: NaiveDate, first_day_of_week: Weekday, output: &mut String) {
         match first_day_of_week {
             Weekday::Mon => {
                 output.push_str(&format!(
                     "{} {} {} {} {} {} {}",
-                    format_date(self.monday),
-                    format_date(self.tuesday),
-                    format_date(self.wednesday),
-                    format_date(self.thursday),
-                    format_date(self.friday),
-                    format_date(self.saturday),
-                    format_date(self.sunday)
+                    format_date(current_date, self.monday),
+                    format_date(current_date, self.tuesday),
+                    format_date(current_date, self.wednesday),
+                    format_date(current_date, self.thursday),
+                    format_date(current_date, self.friday),
+                    format_date(current_date, self.saturday),
+                    format_date(current_date, self.sunday)
                 ));
             }
             Weekday::Sun => {
                 output.push_str(&format!(
                     "{} {} {} {} {} {} {}",
-                    format_date(self.sunday),
-                    format_date(self.monday),
-                    format_date(self.tuesday),
-                    format_date(self.wednesday),
-                    format_date(self.thursday),
-                    format_date(self.friday),
-                    format_date(self.saturday),
+                    format_date(current_date, self.sunday),
+                    format_date(current_date, self.monday),
+                    format_date(current_date, self.tuesday),
+                    format_date(current_date, self.wednesday),
+                    format_date(current_date, self.thursday),
+                    format_date(current_date, self.friday),
+                    format_date(current_date, self.saturday),
                 ));
             }
 
@@ -432,29 +429,42 @@ fn build_month_range(
     MonthRange { months }
 }
 
-fn main() {
-    let args = Arguments::parse();
-
+fn print(args: Arguments, current_date: NaiveDate) -> String {
     let first_day_of_week = determine_default_first_day_of_week(args.first_day_of_week);
-    let start_date = determine_start_date(args.year, args.month, args.months_before);
+    let start_date = determine_start_date(current_date, args.year, args.month, args.months_before);
     let num_months = determine_number_of_months(args.months_after, args.months_before);
 
     let months = build_month_range(start_date, first_day_of_week, num_months);
 
-    println!("{}", months.print())
+    months.print(current_date)
+}
+
+fn main() {
+    let args = Arguments::parse();
+    let today = chrono::Local::now().date_naive();
+
+    println!("{}", print(args, today));
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::OsString;
+
+    fn args<I, T>(itr: I) -> Arguments
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<OsString> + Clone,
+    {
+        Arguments::parse_from(itr)
+    }
 
     #[test]
     fn test_month_print_simple() {
-        let start_date = NaiveDate::from_ymd_opt(2024, 3, 1).unwrap();
-        let first_day_of_week = Weekday::Mon;
-        let month = build_month(start_date, first_day_of_week);
+        let current_date = NaiveDate::from_ymd_opt(2024, 3, 20).unwrap();
+        let args = args(["cal"]);
 
-        insta::assert_snapshot!(month.print(), @r###"
+        insta::assert_snapshot!(print(args, current_date), @r###"
              March 2024     
         Mo Tu We Th Fr Sa Su
                      1  2  3
@@ -467,11 +477,10 @@ mod tests {
 
     #[test]
     fn test_month_print_sun_first() {
-        let start_date = NaiveDate::from_ymd_opt(2024, 3, 1).unwrap();
-        let first_day_of_week = Weekday::Sun;
-        let month = build_month(start_date, first_day_of_week);
+        let current_date = NaiveDate::from_ymd_opt(2024, 3, 20).unwrap();
+        let args = args(["cal", "--first-day-of-week", "sunday"]);
 
-        insta::assert_snapshot!(month.print(), @r###"
+        insta::assert_snapshot!(print(args, current_date), @r###"
              March 2024     
         Su Mo Tu We Th Fr Sa
                         1  2
@@ -485,11 +494,10 @@ mod tests {
 
     #[test]
     fn test_build_month_leap_february() {
-        let start_date = NaiveDate::from_ymd_opt(2024, 2, 1).unwrap();
-        let first_day_of_week = Weekday::Mon;
-        let month = build_month(start_date, first_day_of_week);
+        let current_date = NaiveDate::from_ymd_opt(2024, 2, 20).unwrap();
+        let args = args(["cal"]);
 
-        insta::assert_snapshot!(month, @r###"
+        insta::assert_snapshot!(print(args, current_date), @r###"
            February 2024    
         Mo Tu We Th Fr Sa Su
                   1  2  3  4
@@ -502,11 +510,10 @@ mod tests {
 
     #[test]
     fn test_month_range_print_simple() {
-        let start_date = NaiveDate::from_ymd_opt(2024, 2, 1).unwrap();
-        let first_day_of_week = Weekday::Mon;
-        let month = build_month_range(start_date, first_day_of_week, 3);
+        let current_date = NaiveDate::from_ymd_opt(2024, 3, 20).unwrap();
+        let args = args(["cal", "-B", "1", "-A", "1"]);
 
-        insta::assert_snapshot!(month.print(), @r###"
+        insta::assert_snapshot!(print(args, current_date), @r###"
            February 2024           March 2024            April 2024     
         Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
                   1  2  3  4               1  2  3   1  2  3  4  5  6  7
@@ -519,11 +526,10 @@ mod tests {
 
     #[test]
     fn test_month_range_print_sun_first() {
-        let start_date = NaiveDate::from_ymd_opt(2024, 2, 1).unwrap();
-        let first_day_of_week = Weekday::Sun;
-        let month = build_month_range(start_date, first_day_of_week, 3);
+        let current_date = NaiveDate::from_ymd_opt(2024, 3, 20).unwrap();
+        let args = args(["cal", "--first-day-of-week", "sunday", "-B", "1", "-A", "1"]);
 
-        insta::assert_snapshot!(month.print(), @r###"
+        insta::assert_snapshot!(print(args, current_date), @r###"
            February 2024           March 2024            April 2024     
         Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa
                      1  2  3                  1  2      1  2  3  4  5  6
@@ -537,19 +543,20 @@ mod tests {
 
     #[test]
     fn test_determine_start_date_no_args() {
-        let start_date = determine_start_date(None, None, None);
+        let current_date = NaiveDate::from_ymd_opt(2024, 3, 20).unwrap();
+        let start_date = determine_start_date(current_date, None, None, None);
 
-        assert_eq!(start_date, Local::now().date_naive().with_day(1).unwrap());
+        assert_eq!(start_date, current_date.with_day(1).unwrap());
     }
 
     #[test]
     fn test_determine_start_date_with_months_before() {
-        let start_date = determine_start_date(None, None, Some(1));
+        let current_date = NaiveDate::from_ymd_opt(2024, 3, 20).unwrap();
+        let start_date = determine_start_date(current_date, None, None, Some(1));
 
         assert_eq!(
             start_date,
-            Local::now()
-                .date_naive()
+            current_date
                 .with_day(1)
                 .unwrap()
                 .checked_sub_months(chrono::Months::new(1))
