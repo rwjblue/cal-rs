@@ -20,25 +20,43 @@ Mo Tu We Th Fr Sa Su
 - Customize the first day of the week (Sunday or Monday)
 - On macOS the first day of the week is determined by the system preference (via System Settings > General > Language & Region > First day of week)
 - Automatically defaults to the current month and year if not specified
+- Supports simplified date inputs like `Q1`, `FY2024`, `FYQ2`, and more.
+- Supports the concept of fiscal years (currently hardcoded to those that run July through June)
 
 ## Usage
 
 ```text
-Usage: cal [OPTIONS]
+Usage: cal [OPTIONS] [DATE_INPUT]
+
+Arguments:
+  [DATE_INPUT]
+          Display a specific year, quarter, or month.
+          
+          Examples: 2024, Q1, 2024Q1, FY2024, FYQ2, FY2024Q1
+          
+          Disables usage of `--year` and `--month` flags.
 
 Options:
   -f, --first-day-of-week <FIRST_DAY_OF_WEEK>
-          Sets the first day of the week. If not set, defaults to the system preference [possible values: sunday, monday]
+          Sets the first day of the week. If not set, defaults to the system preference
+          
+          [possible values: sunday, monday]
+
   -y, --year <YEAR>
-          
+          The year to display
+
   -m, --month <MONTH>
-          
-  -A <MONTHS_AFTER>
+          The month to display
+
+  -A, --months-after <MONTHS_AFTER>
           Display the number of months after the current month
-  -B <MONTHS_BEFORE>
+
+  -B, --months-before <MONTHS_BEFORE>
           Display the number of months before the current month
+
   -h, --help
-          Print help
+          Print help (see a summary with '-h')
+
   -V, --version
           Print version
 ```
@@ -69,6 +87,32 @@ Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
 11 12 13 14 15 16 17  15 16 17 18 19 20 21  13 14 15 16 17 18 19
 18 19 20 21 22 23 24  22 23 24 25 26 27 28  20 21 22 23 24 25 26
 25 26 27 28 29 30 31  29 30                 27 28 29 30 31      
+```
+
+Display the calendar for the Q2 of the current year:
+
+```text
+> cal Q2
+     April 2024             May 2024             June 2024      
+Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+ 1  2  3  4  5  6  7         1  2  3  4  5                  1  2
+ 8  9 10 11 12 13 14   6  7  8  9 10 11 12   3  4  5  6  7  8  9
+15 16 17 18 19 20 21  13 14 15 16 17 18 19  10 11 12 13 14 15 16
+22 23 24 25 26 27 28  20 21 22 23 24 25 26  17 18 19 20 21 22 23
+29 30                 27 28 29 30 31        24 25 26 27 28 29 30
+```
+
+Display the calendar for the FYQ3 of the current fiscal year:
+
+```text
+> cal FYQ4
+     April 2024             May 2024             June 2024      
+Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+ 1  2  3  4  5  6  7         1  2  3  4  5                  1  2
+ 8  9 10 11 12 13 14   6  7  8  9 10 11 12   3  4  5  6  7  8  9
+15 16 17 18 19 20 21  13 14 15 16 17 18 19  10 11 12 13 14 15 16
+22 23 24 25 26 27 28  20 21 22 23 24 25 26  17 18 19 20 21 22 23
+29 30                 27 28 29 30 31        24 25 26 27 28 29 30
 ```
 
 Display the calendar for a specific month and year:
