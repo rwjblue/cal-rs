@@ -43,8 +43,11 @@ jobs:
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
+      - name: Generate tarball
+        run: "tar -czf cal-${{ matrix.target }}.tar.gz ./README.md ./LICENSE ./target/${{ matrix.target }}/release/cal"
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/
+          name: cal-${{ matrix.target }}.tar.gz
+          path: cal-${{ matrix.target }}.tar.gz
