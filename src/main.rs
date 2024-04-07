@@ -117,7 +117,7 @@ fn parse_date_input(s: &str) -> Result<DateInput, String> {
     }
 
     // support anything prefixed with FY
-    if let Some(fiscal_year_stripped) = s.strip_prefix("FY") {
+    if let Some(fiscal_year_stripped) = s.to_uppercase().strip_prefix("FY") {
         let style = YearStyle::Fiscal;
         if let Ok(year) = fiscal_year_stripped.parse::<i32>() {
             return Ok(DateInput::Year(Year { style, year }));
@@ -1070,6 +1070,135 @@ mod tests {
         15 16 17 18 19 20 21  12 13 14 15 16 17 18  11 12 13 14 15 16 17
         22 23 24 25 26 27 28  19 20 21 22 23 24 25  18 19 20 21 22 23 24
         29 30 31              26 27 28 29           25 26 27 28 29 30 31
+        "###);
+
+        std::env::remove_var("FORCE_COLOR");
+    }
+
+    #[test]
+    fn test_print_quarter_lowercase() {
+        std::env::set_var("FORCE_COLOR", "0");
+
+        let current_date = NaiveDate::from_ymd_opt(2024, 5, 20).unwrap();
+        let args = args(["cal", "q1"]);
+
+        insta::assert_snapshot!(print(args, current_date), @r###"
+            January 2024         February 2024           March 2024     
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+         1  2  3  4  5  6  7            1  2  3  4               1  2  3
+         8  9 10 11 12 13 14   5  6  7  8  9 10 11   4  5  6  7  8  9 10
+        15 16 17 18 19 20 21  12 13 14 15 16 17 18  11 12 13 14 15 16 17
+        22 23 24 25 26 27 28  19 20 21 22 23 24 25  18 19 20 21 22 23 24
+        29 30 31              26 27 28 29           25 26 27 28 29 30 31
+        "###);
+
+        std::env::remove_var("FORCE_COLOR");
+    }
+
+    #[test]
+    fn test_print_fiscal_quarter() {
+        std::env::set_var("FORCE_COLOR", "0");
+
+        let current_date = NaiveDate::from_ymd_opt(2024, 5, 20).unwrap();
+        let args = args(["cal", "FYQ3"]);
+
+        insta::assert_snapshot!(print(args, current_date), @r###"
+            January 2024         February 2024           March 2024     
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+         1  2  3  4  5  6  7            1  2  3  4               1  2  3
+         8  9 10 11 12 13 14   5  6  7  8  9 10 11   4  5  6  7  8  9 10
+        15 16 17 18 19 20 21  12 13 14 15 16 17 18  11 12 13 14 15 16 17
+        22 23 24 25 26 27 28  19 20 21 22 23 24 25  18 19 20 21 22 23 24
+        29 30 31              26 27 28 29           25 26 27 28 29 30 31
+        "###);
+
+        std::env::remove_var("FORCE_COLOR");
+    }
+
+    #[test]
+    fn test_print_fiscal_quarter_lowercase() {
+        std::env::set_var("FORCE_COLOR", "0");
+
+        let current_date = NaiveDate::from_ymd_opt(2024, 5, 20).unwrap();
+        let args = args(["cal", "fyq3"]);
+
+        insta::assert_snapshot!(print(args, current_date), @r###"
+            January 2024         February 2024           March 2024     
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+         1  2  3  4  5  6  7            1  2  3  4               1  2  3
+         8  9 10 11 12 13 14   5  6  7  8  9 10 11   4  5  6  7  8  9 10
+        15 16 17 18 19 20 21  12 13 14 15 16 17 18  11 12 13 14 15 16 17
+        22 23 24 25 26 27 28  19 20 21 22 23 24 25  18 19 20 21 22 23 24
+        29 30 31              26 27 28 29           25 26 27 28 29 30 31
+        "###);
+
+        std::env::remove_var("FORCE_COLOR");
+    }
+
+    #[test]
+    fn test_print_year() {
+        std::env::set_var("FORCE_COLOR", "0");
+
+        let current_date = NaiveDate::from_ymd_opt(2024, 5, 20).unwrap();
+        let args = args(["cal", "2024"]);
+
+        insta::assert_snapshot!(print(args, current_date), @r###"
+            January 2024         February 2024           March 2024     
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+         1  2  3  4  5  6  7            1  2  3  4               1  2  3
+         8  9 10 11 12 13 14   5  6  7  8  9 10 11   4  5  6  7  8  9 10
+        15 16 17 18 19 20 21  12 13 14 15 16 17 18  11 12 13 14 15 16 17
+        22 23 24 25 26 27 28  19 20 21 22 23 24 25  18 19 20 21 22 23 24
+        29 30 31              26 27 28 29           25 26 27 28 29 30 31
+                                                                        
+
+             April 2024             May 2024             June 2024      
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+         1  2  3  4  5  6  7         1  2  3  4  5                  1  2
+         8  9 10 11 12 13 14   6  7  8  9 10 11 12   3  4  5  6  7  8  9
+        15 16 17 18 19 20 21  13 14 15 16 17 18 19  10 11 12 13 14 15 16
+        22 23 24 25 26 27 28  20 21 22 23 24 25 26  17 18 19 20 21 22 23
+        29 30                 27 28 29 30 31        24 25 26 27 28 29 30
+                                                                        
+
+             July 2024            August 2024          September 2024   
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+         1  2  3  4  5  6  7            1  2  3  4                     1
+         8  9 10 11 12 13 14   5  6  7  8  9 10 11   2  3  4  5  6  7  8
+        15 16 17 18 19 20 21  12 13 14 15 16 17 18   9 10 11 12 13 14 15
+        22 23 24 25 26 27 28  19 20 21 22 23 24 25  16 17 18 19 20 21 22
+        29 30 31              26 27 28 29 30 31     23 24 25 26 27 28 29
+                                                    30                  
+
+            October 2024         November 2024         December 2024    
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+            1  2  3  4  5  6               1  2  3                     1
+         7  8  9 10 11 12 13   4  5  6  7  8  9 10   2  3  4  5  6  7  8
+        14 15 16 17 18 19 20  11 12 13 14 15 16 17   9 10 11 12 13 14 15
+        21 22 23 24 25 26 27  18 19 20 21 22 23 24  16 17 18 19 20 21 22
+        28 29 30 31           25 26 27 28 29 30     23 24 25 26 27 28 29
+                                                    30 31               
+        "###);
+
+        std::env::remove_var("FORCE_COLOR");
+    }
+
+    #[test]
+    fn test_print_future_fiscal_quarter() {
+        std::env::set_var("FORCE_COLOR", "0");
+
+        let current_date = NaiveDate::from_ymd_opt(2024, 5, 20).unwrap();
+        let args = args(["cal", "FY2090Q3"]);
+
+        insta::assert_snapshot!(print(args, current_date), @r###"
+            January 2090         February 2090           March 2090     
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+                           1         1  2  3  4  5         1  2  3  4  5
+         2  3  4  5  6  7  8   6  7  8  9 10 11 12   6  7  8  9 10 11 12
+         9 10 11 12 13 14 15  13 14 15 16 17 18 19  13 14 15 16 17 18 19
+        16 17 18 19 20 21 22  20 21 22 23 24 25 26  20 21 22 23 24 25 26
+        23 24 25 26 27 28 29  27 28                 27 28 29 30 31      
+        30 31                                                           
         "###);
 
         std::env::remove_var("FORCE_COLOR");
