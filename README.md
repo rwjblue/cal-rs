@@ -33,7 +33,7 @@ Arguments:
   [DATE_INPUT]
           Display a specific year, quarter, or month.
           
-          Examples: 2024, Q1, 2024Q1, FY2024, FYQ2, FY2024Q1
+          Examples: 2024, 24, Q1, 24Q1, FY2024, FY24, FYQ2, FY2024Q1, FY24Q1
           
           Disables usage of `--year` and `--month` flags.
 
