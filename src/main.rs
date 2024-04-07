@@ -1,7 +1,6 @@
 use clap::{Parser, ValueEnum};
 use itertools::Itertools;
 use std::fmt;
-#[cfg(not(test))]
 use std::io::IsTerminal;
 
 use chrono::prelude::*;
@@ -36,6 +35,34 @@ struct Arguments {
     /// Display the number of months before the current month.
     #[arg(short = 'B', long, value_parser = clap::value_parser!(u32).range(1..=12))]
     months_before: Option<u32>,
+
+    /// Enable or disable colored output.
+    #[arg(
+            long,
+            require_equals = true,
+            value_name = "WHEN",
+            num_args = 0..=1,
+            default_value_t = ColorWhen::Auto,
+            default_missing_value = "always",
+            value_enum
+        )]
+    color: ColorWhen,
+}
+
+#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Eq)]
+enum ColorWhen {
+    Always,
+    Auto,
+    Never,
+}
+
+impl std::fmt::Display for ColorWhen {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.to_possible_value()
+            .expect("no values are skipped")
+            .get_name()
+            .fmt(f)
+    }
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum, PartialEq)]
@@ -297,7 +324,7 @@ struct MonthRange {
 }
 
 impl MonthRange {
-    fn print(&self, current_date: NaiveDate) -> String {
+    fn print(&self, color: ColorWhen, current_date: NaiveDate) -> String {
         let mut output = String::new();
 
         for (chunk_index, chunk) in self.months.chunks(3).enumerate() {
@@ -341,7 +368,7 @@ impl MonthRange {
                     let week = month.weeks.get(week_index);
                     match week {
                         Some(week) => {
-                            week.print(current_date, month.first_day_of_week, &mut output)
+                            week.print(color, current_date, month.first_day_of_week, &mut output)
                         }
                         None => {
                             output.push_str("                    ");
@@ -393,7 +420,7 @@ impl Month {
         };
     }
 
-    fn print(&self, current_date: NaiveDate) -> String {
+    fn print(&self, color: ColorWhen, current_date: NaiveDate) -> String {
         let mut output = String::new();
 
         self.print_header(&mut output);
@@ -402,7 +429,7 @@ impl Month {
         output.push('\n');
 
         for week in &self.weeks {
-            week.print(current_date, self.first_day_of_week, &mut output);
+            week.print(color, current_date, self.first_day_of_week, &mut output);
             output.push('\n');
         }
 
@@ -413,14 +440,14 @@ impl Month {
 impl fmt::Display for Month {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let today = chrono::Local::now().date_naive();
-        write!(f, "{}", self.print(today))
+        write!(f, "{}", self.print(ColorWhen::Auto, today))
     }
 }
 
-fn format_date(current_date: NaiveDate, date: Option<NaiveDate>) -> String {
+fn format_date(color: ColorWhen, current_date: NaiveDate, date: Option<NaiveDate>) -> String {
     match date {
         Some(d) => {
-            if is_interactive() && d == current_date {
+            if show_color(color) && d == current_date {
                 let highlight_on = "\x1B[7m"; // ANSI code for reverse video on
                 let highlight_off = "\x1B[27m"; // ANSI code for reverse video off
 
@@ -433,18 +460,25 @@ fn format_date(current_date: NaiveDate, date: Option<NaiveDate>) -> String {
     }
 }
 
-#[cfg(not(test))]
-fn is_interactive() -> bool {
-    std::io::stdout().is_terminal()
+fn show_color(color: ColorWhen) -> bool {
+    // Check for the environment variable override first
+    if let Ok(val) = std::env::var("FORCE_COLOR") {
+        match val.as_str() {
+            "1" | "true" => return true,
+            "0" | "false" => return false,
+            _ => {}
+        }
+    }
+
+    match color {
+        ColorWhen::Always => true,
+        ColorWhen::Auto => is_interactive(),
+        ColorWhen::Never => false,
+    }
 }
 
-#[cfg(test)]
 fn is_interactive() -> bool {
-    // Default to false in tests, so that the tests are stable between `cargo test` (which run in
-    // interactive mode) and `cargo nextest run` (which runs in non-interactive mode).
-    //
-    // This ensures the tests are stable
-    false
+    std::io::stdout().is_terminal()
 }
 
 #[derive(Debug)]
@@ -481,30 +515,36 @@ impl Week {
             && self.sunday.is_none()
     }
 
-    fn print(&self, current_date: NaiveDate, first_day_of_week: Weekday, output: &mut String) {
+    fn print(
+        &self,
+        color: ColorWhen,
+        current_date: NaiveDate,
+        first_day_of_week: Weekday,
+        output: &mut String,
+    ) {
         match first_day_of_week {
             Weekday::Mon => {
                 output.push_str(&format!(
                     "{} {} {} {} {} {} {}",
-                    format_date(current_date, self.monday),
-                    format_date(current_date, self.tuesday),
-                    format_date(current_date, self.wednesday),
-                    format_date(current_date, self.thursday),
-                    format_date(current_date, self.friday),
-                    format_date(current_date, self.saturday),
-                    format_date(current_date, self.sunday)
+                    format_date(color, current_date, self.monday),
+                    format_date(color, current_date, self.tuesday),
+                    format_date(color, current_date, self.wednesday),
+                    format_date(color, current_date, self.thursday),
+                    format_date(color, current_date, self.friday),
+                    format_date(color, current_date, self.saturday),
+                    format_date(color, current_date, self.sunday)
                 ));
             }
             Weekday::Sun => {
                 output.push_str(&format!(
                     "{} {} {} {} {} {} {}",
-                    format_date(current_date, self.sunday),
-                    format_date(current_date, self.monday),
-                    format_date(current_date, self.tuesday),
-                    format_date(current_date, self.wednesday),
-                    format_date(current_date, self.thursday),
-                    format_date(current_date, self.friday),
-                    format_date(current_date, self.saturday),
+                    format_date(color, current_date, self.sunday),
+                    format_date(color, current_date, self.monday),
+                    format_date(color, current_date, self.tuesday),
+                    format_date(color, current_date, self.wednesday),
+                    format_date(color, current_date, self.thursday),
+                    format_date(color, current_date, self.friday),
+                    format_date(color, current_date, self.saturday),
                 ));
             }
 
@@ -744,6 +784,7 @@ fn last_day_of_month_for(date: NaiveDate) -> NaiveDate {
 }
 
 fn print(args: Arguments, current_date: NaiveDate) -> String {
+    let color = args.color;
     let date_input = normalize_date_input_for_two_digit_year(current_date, args.date_input);
 
     let args = Arguments { date_input, ..args };
@@ -752,7 +793,7 @@ fn print(args: Arguments, current_date: NaiveDate) -> String {
 
     let months = build_month_range(start_date, end_date, first_day_of_week);
 
-    months.print(current_date)
+    months.print(color, current_date)
 }
 
 fn main() {
@@ -996,6 +1037,8 @@ mod tests {
 
     #[test]
     fn test_month_print_simple() {
+        std::env::set_var("FORCE_COLOR", "0");
+
         let current_date = NaiveDate::from_ymd_opt(2024, 3, 20).unwrap();
         let args = args(["cal"]);
 
@@ -1008,10 +1051,14 @@ mod tests {
         18 19 20 21 22 23 24
         25 26 27 28 29 30 31
         "###);
+
+        std::env::remove_var("FORCE_COLOR");
     }
 
     #[test]
     fn test_print_quarter() {
+        std::env::set_var("FORCE_COLOR", "0");
+
         let current_date = NaiveDate::from_ymd_opt(2024, 5, 20).unwrap();
         let args = args(["cal", "Q1"]);
 
@@ -1024,10 +1071,14 @@ mod tests {
         22 23 24 25 26 27 28  19 20 21 22 23 24 25  18 19 20 21 22 23 24
         29 30 31              26 27 28 29           25 26 27 28 29 30 31
         "###);
+
+        std::env::remove_var("FORCE_COLOR");
     }
 
     #[test]
     fn test_month_print_sun_first() {
+        std::env::set_var("FORCE_COLOR", "0");
+
         let current_date = NaiveDate::from_ymd_opt(2024, 3, 20).unwrap();
         let args = args(["cal", "--first-day-of-week", "sunday"]);
 
@@ -1041,10 +1092,14 @@ mod tests {
         24 25 26 27 28 29 30
         31                  
         "###);
+
+        std::env::remove_var("FORCE_COLOR");
     }
 
     #[test]
     fn test_build_month_leap_february() {
+        std::env::set_var("FORCE_COLOR", "0");
+
         let current_date = NaiveDate::from_ymd_opt(2024, 2, 20).unwrap();
         let args = args(["cal"]);
 
@@ -1057,10 +1112,14 @@ mod tests {
         19 20 21 22 23 24 25
         26 27 28 29         
         "###);
+
+        std::env::remove_var("FORCE_COLOR");
     }
 
     #[test]
     fn test_month_range_print_simple() {
+        std::env::set_var("FORCE_COLOR", "0");
+
         let current_date = NaiveDate::from_ymd_opt(2024, 3, 20).unwrap();
         let args = args(["cal", "-B", "1", "-A", "1"]);
 
@@ -1073,10 +1132,14 @@ mod tests {
         19 20 21 22 23 24 25  18 19 20 21 22 23 24  22 23 24 25 26 27 28
         26 27 28 29           25 26 27 28 29 30 31  29 30               
         "###);
+
+        std::env::remove_var("FORCE_COLOR");
     }
 
     #[test]
     fn test_month_range_print_long_args() {
+        std::env::set_var("FORCE_COLOR", "0");
+
         let current_date = NaiveDate::from_ymd_opt(2023, 3, 20).unwrap();
         let args = args(["cal", "--months-before", "1", "--months-after", "1"]);
 
@@ -1089,10 +1152,14 @@ mod tests {
         20 21 22 23 24 25 26  20 21 22 23 24 25 26  17 18 19 20 21 22 23
         27 28                 27 28 29 30 31        24 25 26 27 28 29 30
         "###);
+
+        std::env::remove_var("FORCE_COLOR");
     }
 
     #[test]
     fn test_month_range_print_sun_first() {
+        std::env::set_var("FORCE_COLOR", "0");
+
         let current_date = NaiveDate::from_ymd_opt(2024, 3, 20).unwrap();
         let args = args(["cal", "--first-day-of-week", "sunday", "-B", "1", "-A", "1"]);
 
@@ -1106,5 +1173,7 @@ mod tests {
         25 26 27 28 29        24 25 26 27 28 29 30  28 29 30            
                               31                                        
         "###);
+
+        std::env::remove_var("FORCE_COLOR");
     }
 }
