@@ -966,67 +966,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
-    fn test_parse_date_two_digit_year() {
-        assert_eq!(
-            parse_date_input("FY24Q1"),
-            Ok(DateInput::YearQuarter(
-                Year {
-                    style: YearStyle::Fiscal,
-                    year: 2024
-                },
-                Quarter::Q1
-            ))
-        );
-
-        assert_eq!(
-            parse_date_input("FY25Q2"),
-            Ok(DateInput::YearQuarter(
-                Year {
-                    style: YearStyle::Fiscal,
-                    year: 2025
-                },
-                Quarter::Q2
-            ))
-        );
-
-        assert_eq!(
-            parse_date_input("FY24"),
-            Ok(DateInput::Year(Year {
-                style: YearStyle::Fiscal,
-                year: 2024
-            },))
-        );
-
-        assert_eq!(
-            parse_date_input("FY25"),
-            Ok(DateInput::Year(Year {
-                style: YearStyle::Fiscal,
-                year: 2025
-            },))
-        );
-
-        assert_eq!(
-            parse_date_input("25Q2"),
-            Ok(DateInput::YearQuarter(
-                Year {
-                    style: YearStyle::Calendar,
-                    year: 2025
-                },
-                Quarter::Q2
-            ))
-        );
-
-        assert_eq!(
-            parse_date_input("24"),
-            Ok(DateInput::Year(Year {
-                style: YearStyle::Calendar,
-                year: 2024
-            },))
-        );
-    }
-
-    #[test]
     fn test_parse_date_input_invalid() {
         assert!(parse_date_input("").is_err());
         assert!(parse_date_input("invalid").is_err());
@@ -1183,6 +1122,73 @@ mod tests {
         std::env::remove_var("FORCE_COLOR");
     }
 
+    #[test]
+    fn test_print_two_digit_year() {
+        std::env::set_var("FORCE_COLOR", "0");
+
+        let current_date = NaiveDate::from_ymd_opt(2024, 5, 20).unwrap();
+        let args = args(["cal", "24"]);
+
+        insta::assert_snapshot!(print(args, current_date), @r###"
+            January 2024         February 2024           March 2024     
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+         1  2  3  4  5  6  7            1  2  3  4               1  2  3
+         8  9 10 11 12 13 14   5  6  7  8  9 10 11   4  5  6  7  8  9 10
+        15 16 17 18 19 20 21  12 13 14 15 16 17 18  11 12 13 14 15 16 17
+        22 23 24 25 26 27 28  19 20 21 22 23 24 25  18 19 20 21 22 23 24
+        29 30 31              26 27 28 29           25 26 27 28 29 30 31
+                                                                        
+
+             April 2024             May 2024             June 2024      
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+         1  2  3  4  5  6  7         1  2  3  4  5                  1  2
+         8  9 10 11 12 13 14   6  7  8  9 10 11 12   3  4  5  6  7  8  9
+        15 16 17 18 19 20 21  13 14 15 16 17 18 19  10 11 12 13 14 15 16
+        22 23 24 25 26 27 28  20 21 22 23 24 25 26  17 18 19 20 21 22 23
+        29 30                 27 28 29 30 31        24 25 26 27 28 29 30
+                                                                        
+
+             July 2024            August 2024          September 2024   
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+         1  2  3  4  5  6  7            1  2  3  4                     1
+         8  9 10 11 12 13 14   5  6  7  8  9 10 11   2  3  4  5  6  7  8
+        15 16 17 18 19 20 21  12 13 14 15 16 17 18   9 10 11 12 13 14 15
+        22 23 24 25 26 27 28  19 20 21 22 23 24 25  16 17 18 19 20 21 22
+        29 30 31              26 27 28 29 30 31     23 24 25 26 27 28 29
+                                                    30                  
+
+            October 2024         November 2024         December 2024    
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+            1  2  3  4  5  6               1  2  3                     1
+         7  8  9 10 11 12 13   4  5  6  7  8  9 10   2  3  4  5  6  7  8
+        14 15 16 17 18 19 20  11 12 13 14 15 16 17   9 10 11 12 13 14 15
+        21 22 23 24 25 26 27  18 19 20 21 22 23 24  16 17 18 19 20 21 22
+        28 29 30 31           25 26 27 28 29 30     23 24 25 26 27 28 29
+                                                    30 31               
+        "###);
+
+        std::env::remove_var("FORCE_COLOR");
+    }
+
+    #[test]
+    fn test_print_two_digit_year_fiscal_quarter() {
+        std::env::set_var("FORCE_COLOR", "0");
+
+        let current_date = NaiveDate::from_ymd_opt(2024, 5, 20).unwrap();
+        let args = args(["cal", "FY24Q3"]);
+
+        insta::assert_snapshot!(print(args, current_date), @r###"
+            January 2024         February 2024           March 2024     
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+         1  2  3  4  5  6  7            1  2  3  4               1  2  3
+         8  9 10 11 12 13 14   5  6  7  8  9 10 11   4  5  6  7  8  9 10
+        15 16 17 18 19 20 21  12 13 14 15 16 17 18  11 12 13 14 15 16 17
+        22 23 24 25 26 27 28  19 20 21 22 23 24 25  18 19 20 21 22 23 24
+        29 30 31              26 27 28 29           25 26 27 28 29 30 31
+        "###);
+
+        std::env::remove_var("FORCE_COLOR");
+    }
     #[test]
     fn test_print_future_fiscal_quarter() {
         std::env::set_var("FORCE_COLOR", "0");

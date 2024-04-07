@@ -20,7 +20,8 @@ Mo Tu We Th Fr Sa Su
 - Customize the first day of the week (Sunday or Monday)
 - On macOS the first day of the week is determined by the system preference (via System Settings > General > Language & Region > First day of week)
 - Automatically defaults to the current month and year if not specified
-- Supports simplified date inputs like `Q1`, `FY2024`, `FYQ2`, and more.
+- Supports simplified date inputs like `Q1`, `FY2024`, `FY24Q2`, `FY24`, `FYQ2`, and more.
+- Supports two digit year for ease of use (assumes current century)
 - Supports the concept of fiscal years (currently hardcoded to those that run July through June)
 
 ## Usage
