@@ -3,6 +3,10 @@ name = "cal"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
+authors = ["Robert Jackson <me@rwjblue.com>"]
+description = "`cal` is a simple command-line calendar application written in Rust."
+repository = "https://github.com/rwjblue/cal-rs"
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
