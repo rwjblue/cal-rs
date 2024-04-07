@@ -54,6 +54,12 @@ Options:
   -B, --months-before <MONTHS_BEFORE>
           Display the number of months before the current month
 
+      --color[=<WHEN>]
+          Enable or disable colored output
+          
+          [default: auto]
+          [possible values: always, auto, never]
+
   -h, --help
           Print help (see a summary with '-h')
 
