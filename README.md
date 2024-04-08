@@ -24,6 +24,16 @@ Mo Tu We Th Fr Sa Su
 - Supports two digit year for ease of use (assumes current century)
 - Supports the concept of fiscal years (currently hardcoded to those that run July through June)
 
+## Installation
+
+If you use [homebrew](https://brew.sh), you can install via:
+
+```text
+brew install rwjblue/tap/cal
+```
+
+Otherwise, you can install by manually cloning and running `cargo install`.
+
 ## Usage
 
 ```text
