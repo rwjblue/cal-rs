@@ -38,6 +38,10 @@ struct Arguments {
     #[arg(short = 'B', long, value_parser = clap::value_parser!(u32).range(1..=12))]
     months_before: Option<u32>,
 
+    /// Configure the start date of the fiscal year. Defaults to July 1st of the current year.
+    #[arg(long, value_parser = clap::value_parser!(u32).range(1..=12), value_name = "MM")]
+    fiscal_year_start_month: Option<u32>,
+
     /// Enable or disable colored output.
     #[arg(
             long,
@@ -107,6 +111,40 @@ struct Year {
 enum YearStyle {
     Calendar,
     Fiscal,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct FiscalYear {
+    q1: (u32, u32),
+    q2: (u32, u32),
+    q3: (u32, u32),
+    q4: (u32, u32),
+}
+
+impl Default for FiscalYear {
+    fn default() -> Self {
+        FiscalYear {
+            q1: (7, 9),
+            q2: (10, 12),
+            q3: (1, 3),
+            q4: (4, 6),
+        }
+    }
+}
+
+impl FiscalYear {
+    fn build_from_start_month(start_month: u32) -> FiscalYear {
+        FiscalYear {
+            q1: (start_month, add_months(start_month, 2)),
+            q2: (add_months(start_month, 3), add_months(start_month, 5)),
+            q3: (add_months(start_month, 6), add_months(start_month, 8)),
+            q4: (add_months(start_month, 9), add_months(start_month, 11)),
+        }
+    }
+}
+
+fn add_months(start_month: u32, amount_to_add: u32) -> u32 {
+    (start_month + amount_to_add) % 12
 }
 
 fn parse_date_input(s: &str) -> Result<DateInput, String> {
@@ -728,15 +766,24 @@ fn determine_date_range(current_date: NaiveDate, args: Arguments) -> (NaiveDate,
             (start_date, end_date)
         }
         DateInput::YearQuarter(year, quarter) => {
-            let (start_month, end_month) = match (year.style, quarter) {
-                (YearStyle::Calendar, Quarter::Q1) => (1, 3),
-                (YearStyle::Calendar, Quarter::Q2) => (4, 6),
-                (YearStyle::Calendar, Quarter::Q3) => (7, 9),
-                (YearStyle::Calendar, Quarter::Q4) => (10, 12),
-                (YearStyle::Fiscal, Quarter::Q1) => (7, 9),
-                (YearStyle::Fiscal, Quarter::Q2) => (10, 12),
-                (YearStyle::Fiscal, Quarter::Q3) => (1, 3),
-                (YearStyle::Fiscal, Quarter::Q4) => (4, 6),
+            let (start_month, end_month) = match year.style {
+                YearStyle::Calendar => match quarter {
+                    Quarter::Q1 => (1, 3),
+                    Quarter::Q2 => (4, 6),
+                    Quarter::Q3 => (7, 9),
+                    Quarter::Q4 => (10, 12),
+                },
+                YearStyle::Fiscal => {
+                    let fiscal_year_start_month = args.fiscal_year_start_month.unwrap_or(7);
+                    let fiscal_year = FiscalYear::build_from_start_month(fiscal_year_start_month);
+
+                    match quarter {
+                        Quarter::Q1 => fiscal_year.q1,
+                        Quarter::Q2 => fiscal_year.q2,
+                        Quarter::Q3 => fiscal_year.q3,
+                        Quarter::Q4 => fiscal_year.q4,
+                    }
+                }
             };
 
             let start_date = NaiveDate::from_ymd_opt(year.year, start_month, 1).unwrap();
@@ -1065,6 +1112,18 @@ mod tests {
         22 23 24 25 26 27 28  19 20 21 22 23 24 25  18 19 20 21 22 23 24
         29 30 31              26 27 28 29           25 26 27 28 29 30 31
         "###);
+
+        std::env::remove_var("FORCE_COLOR");
+    }
+
+    #[test]
+    fn test_print_fiscal_quarter_custom_fiscal_start() {
+        std::env::set_var("FORCE_COLOR", "0");
+
+        let current_date = NaiveDate::from_ymd_opt(2024, 5, 20).unwrap();
+        let args = args(["cal", "--fiscal-year-start-month", "4", "FYQ3"]);
+
+        insta::assert_snapshot!(print(args, current_date), @r###""###);
 
         std::env::remove_var("FORCE_COLOR");
     }
