@@ -17,7 +17,7 @@ home = "0.5.9"
 itertools = "0.12.1"
 plist = "1.6.1"
 tracing = "0.1.40"
-tracing-subscriber = "0.3.18"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 
 [dev-dependencies]
 insta = { version = "1.38.0", features = ["yaml"] }

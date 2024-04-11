@@ -3,6 +3,7 @@ use itertools::Itertools;
 use std::fmt;
 use std::io::IsTerminal;
 use tracing::{debug, info};
+use tracing_subscriber::EnvFilter;
 
 use chrono::prelude::*;
 
@@ -802,7 +803,11 @@ fn print(args: Arguments, current_date: NaiveDate) -> String {
 }
 
 fn main() {
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("off")),
+        )
+        .init();
 
     let args = Arguments::parse();
     let today = chrono::Local::now().date_naive();
