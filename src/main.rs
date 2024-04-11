@@ -2,6 +2,7 @@ use clap::{Parser, ValueEnum};
 use itertools::Itertools;
 use std::fmt;
 use std::io::IsTerminal;
+use tracing::{debug, info};
 
 use chrono::prelude::*;
 
@@ -784,6 +785,8 @@ fn last_day_of_month_for(date: NaiveDate) -> NaiveDate {
 }
 
 fn print(args: Arguments, current_date: NaiveDate) -> String {
+    debug!("print called for {} with {:#?}", current_date, args);
+
     let color = args.color;
     let date_input = normalize_date_input_for_two_digit_year(current_date, args.date_input);
 
@@ -791,12 +794,16 @@ fn print(args: Arguments, current_date: NaiveDate) -> String {
     let first_day_of_week = determine_default_first_day_of_week(args.first_day_of_week);
     let (start_date, end_date) = determine_date_range(current_date, args);
 
+    info!("Printing calendar for {} - {}", start_date, end_date);
+
     let months = build_month_range(start_date, end_date, first_day_of_week);
 
     months.print(color, current_date)
 }
 
 fn main() {
+    tracing_subscriber::fmt::init();
+
     let args = Arguments::parse();
     let today = chrono::Local::now().date_naive();
 
