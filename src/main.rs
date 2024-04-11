@@ -2,7 +2,7 @@ use clap::{Parser, ValueEnum};
 use itertools::Itertools;
 use std::fmt;
 use std::io::IsTerminal;
-use tracing::{debug, info};
+use tracing::info;
 use tracing_subscriber::EnvFilter;
 
 use chrono::prelude::*;
@@ -326,6 +326,7 @@ struct MonthRange {
 }
 
 impl MonthRange {
+    #[tracing::instrument]
     fn print(&self, color: ColorWhen, current_date: NaiveDate) -> String {
         let mut output = String::new();
 
@@ -517,6 +518,7 @@ impl Week {
             && self.sunday.is_none()
     }
 
+    #[tracing::instrument]
     fn print(
         &self,
         color: ColorWhen,
@@ -596,6 +598,7 @@ fn build_month(days: Vec<NaiveDate>, first_day_of_week: Weekday) -> Month {
     }
 }
 
+#[tracing::instrument]
 fn build_month_range(
     start_date: NaiveDate,
     end_date: NaiveDate,
@@ -664,6 +667,7 @@ fn normalize_date_input_for_two_digit_year(
     date_input
 }
 
+#[tracing::instrument]
 fn determine_date_range(current_date: NaiveDate, args: Arguments) -> (NaiveDate, NaiveDate) {
     // `--year` and `--month` are mutually exclusive with the date_input field, so we can safely
     // normalize `--year` and `--month` into DateInput::YearMonth without issue
@@ -785,9 +789,8 @@ fn last_day_of_month_for(date: NaiveDate) -> NaiveDate {
     next_month_start_date.pred_opt().unwrap()
 }
 
+#[tracing::instrument]
 fn print(args: Arguments, current_date: NaiveDate) -> String {
-    debug!("print called for {} with {:#?}", current_date, args);
-
     let color = args.color;
     let date_input = normalize_date_input_for_two_digit_year(current_date, args.date_input);
 
