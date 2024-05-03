@@ -2,7 +2,7 @@ use clap::{Parser, ValueEnum};
 use itertools::Itertools;
 use std::fmt;
 use std::io::IsTerminal;
-use tracing::info;
+use tracing::{debug, info, trace};
 use tracing_subscriber::EnvFilter;
 
 use chrono::prelude::*;
@@ -364,7 +364,6 @@ struct MonthRange {
 }
 
 impl MonthRange {
-    #[tracing::instrument]
     fn print(&self, color: ColorWhen, current_date: NaiveDate) -> String {
         let mut output = String::new();
 
@@ -556,7 +555,6 @@ impl Week {
             && self.sunday.is_none()
     }
 
-    #[tracing::instrument]
     fn print(
         &self,
         color: ColorWhen,
@@ -636,7 +634,6 @@ fn build_month(days: Vec<NaiveDate>, first_day_of_week: Weekday) -> Month {
     }
 }
 
-#[tracing::instrument]
 fn build_month_range(
     start_date: NaiveDate,
     end_date: NaiveDate,
@@ -705,7 +702,6 @@ fn normalize_date_input_for_two_digit_year(
     date_input
 }
 
-#[tracing::instrument]
 fn determine_date_range(current_date: NaiveDate, args: Arguments) -> (NaiveDate, NaiveDate) {
     // `--year` and `--month` are mutually exclusive with the date_input field, so we can safely
     // normalize `--year` and `--month` into DateInput::YearMonth without issue
@@ -776,6 +772,7 @@ fn determine_date_range(current_date: NaiveDate, args: Arguments) -> (NaiveDate,
                 YearStyle::Fiscal => {
                     let fiscal_year_start_month = args.fiscal_year_start_month.unwrap_or(7);
                     let fiscal_year = FiscalYear::build_from_start_month(fiscal_year_start_month);
+                    trace!(fiscal_year = ?fiscal_year);
 
                     match quarter {
                         Quarter::Q1 => fiscal_year.q1,
@@ -786,6 +783,7 @@ fn determine_date_range(current_date: NaiveDate, args: Arguments) -> (NaiveDate,
                 }
             };
 
+            debug!("Start month: {}, End month: {}", start_month, end_month);
             let start_date = NaiveDate::from_ymd_opt(year.year, start_month, 1).unwrap();
             let first_day_of_end_month = NaiveDate::from_ymd_opt(year.year, end_month, 1).unwrap();
             let end_date = last_day_of_month_for(first_day_of_end_month);
@@ -836,7 +834,6 @@ fn last_day_of_month_for(date: NaiveDate) -> NaiveDate {
     next_month_start_date.pred_opt().unwrap()
 }
 
-#[tracing::instrument]
 fn print(args: Arguments, current_date: NaiveDate) -> String {
     let color = args.color;
     let date_input = normalize_date_input_for_two_digit_year(current_date, args.date_input);
