@@ -1,1 +1,4 @@
 /target
+
+# Insta snapshots.
+*.pending-snap
