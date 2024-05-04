@@ -717,30 +717,37 @@ fn determine_date_range(current_date: NaiveDate, args: Arguments) -> (NaiveDate,
     };
 
     let (start_date, end_date) = match args.date_input.expect("Date input is required") {
-        DateInput::Year(year) => (
-            NaiveDate::from_ymd_opt(year.year, 1, 1).unwrap(),
-            NaiveDate::from_ymd_opt(year.year, 12, 31).unwrap(),
-        ),
+        DateInput::Year(year) => match year.style {
+            YearStyle::Calendar => (
+                NaiveDate::from_ymd_opt(year.year, 1, 1).unwrap(),
+                NaiveDate::from_ymd_opt(year.year, 12, 31).unwrap(),
+            ),
+            YearStyle::Fiscal => (
+                NaiveDate::from_ymd_opt(year.year - 1, 7, 1).unwrap(),
+                NaiveDate::from_ymd_opt(year.year, 6, 30).unwrap(),
+            ),
+        },
         DateInput::YearMonth(year, month) => {
+            // TODO: emit a nice error message if someone tries to use fiscal year and month syntax
             let start_date = NaiveDate::from_ymd_opt(year.year, month, 1).unwrap();
             let end_date = last_day_of_month_for(start_date);
 
             (start_date, end_date)
         }
         DateInput::YearQuarter(year, quarter) => {
-            let (start_month, end_month) = match (year.style, quarter) {
-                (YearStyle::Calendar, Quarter::Q1) => (1, 3),
-                (YearStyle::Calendar, Quarter::Q2) => (4, 6),
-                (YearStyle::Calendar, Quarter::Q3) => (7, 9),
-                (YearStyle::Calendar, Quarter::Q4) => (10, 12),
-                (YearStyle::Fiscal, Quarter::Q1) => (7, 9),
-                (YearStyle::Fiscal, Quarter::Q2) => (10, 12),
-                (YearStyle::Fiscal, Quarter::Q3) => (1, 3),
-                (YearStyle::Fiscal, Quarter::Q4) => (4, 6),
+            let (year, start_month, end_month) = match (year.style, quarter) {
+                (YearStyle::Calendar, Quarter::Q1) => (year.year, 1, 3),
+                (YearStyle::Calendar, Quarter::Q2) => (year.year, 4, 6),
+                (YearStyle::Calendar, Quarter::Q3) => (year.year, 7, 9),
+                (YearStyle::Calendar, Quarter::Q4) => (year.year, 10, 12),
+                (YearStyle::Fiscal, Quarter::Q1) => (year.year - 1, 7, 9),
+                (YearStyle::Fiscal, Quarter::Q2) => (year.year - 1, 10, 12),
+                (YearStyle::Fiscal, Quarter::Q3) => (year.year, 1, 3),
+                (YearStyle::Fiscal, Quarter::Q4) => (year.year, 4, 6),
             };
 
-            let start_date = NaiveDate::from_ymd_opt(year.year, start_month, 1).unwrap();
-            let first_day_of_end_month = NaiveDate::from_ymd_opt(year.year, end_month, 1).unwrap();
+            let start_date = NaiveDate::from_ymd_opt(year, start_month, 1).unwrap();
+            let first_day_of_end_month = NaiveDate::from_ymd_opt(year, end_month, 1).unwrap();
             let end_date = last_day_of_month_for(first_day_of_end_month);
 
             (start_date, end_date)
@@ -1138,6 +1145,54 @@ mod tests {
     }
 
     #[test]
+    fn test_print_fiscal_year() {
+        std::env::set_var("FORCE_COLOR", "0");
+
+        let current_date = NaiveDate::from_ymd_opt(2024, 5, 20).unwrap();
+        let args = args(["cal", "FY2025"]);
+
+        insta::assert_snapshot!(print(args, current_date), @r###"
+             July 2024            August 2024          September 2024   
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+         1  2  3  4  5  6  7            1  2  3  4                     1
+         8  9 10 11 12 13 14   5  6  7  8  9 10 11   2  3  4  5  6  7  8
+        15 16 17 18 19 20 21  12 13 14 15 16 17 18   9 10 11 12 13 14 15
+        22 23 24 25 26 27 28  19 20 21 22 23 24 25  16 17 18 19 20 21 22
+        29 30 31              26 27 28 29 30 31     23 24 25 26 27 28 29
+                                                    30                  
+
+            October 2024         November 2024         December 2024    
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+            1  2  3  4  5  6               1  2  3                     1
+         7  8  9 10 11 12 13   4  5  6  7  8  9 10   2  3  4  5  6  7  8
+        14 15 16 17 18 19 20  11 12 13 14 15 16 17   9 10 11 12 13 14 15
+        21 22 23 24 25 26 27  18 19 20 21 22 23 24  16 17 18 19 20 21 22
+        28 29 30 31           25 26 27 28 29 30     23 24 25 26 27 28 29
+                                                    30 31               
+
+            January 2025         February 2025           March 2025     
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+               1  2  3  4  5                  1  2                  1  2
+         6  7  8  9 10 11 12   3  4  5  6  7  8  9   3  4  5  6  7  8  9
+        13 14 15 16 17 18 19  10 11 12 13 14 15 16  10 11 12 13 14 15 16
+        20 21 22 23 24 25 26  17 18 19 20 21 22 23  17 18 19 20 21 22 23
+        27 28 29 30 31        24 25 26 27 28        24 25 26 27 28 29 30
+                                                    31                  
+
+             April 2025             May 2025             June 2025      
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+            1  2  3  4  5  6            1  2  3  4                     1
+         7  8  9 10 11 12 13   5  6  7  8  9 10 11   2  3  4  5  6  7  8
+        14 15 16 17 18 19 20  12 13 14 15 16 17 18   9 10 11 12 13 14 15
+        21 22 23 24 25 26 27  19 20 21 22 23 24 25  16 17 18 19 20 21 22
+        28 29 30              26 27 28 29 30 31     23 24 25 26 27 28 29
+                                                    30                  
+        "###);
+
+        std::env::remove_var("FORCE_COLOR");
+    }
+
+    #[test]
     fn test_print_two_digit_year() {
         std::env::set_var("FORCE_COLOR", "0");
 
@@ -1204,6 +1259,28 @@ mod tests {
 
         std::env::remove_var("FORCE_COLOR");
     }
+
+    #[test]
+    fn test_print_two_digit_year_fiscal_quarter_q1() {
+        std::env::set_var("FORCE_COLOR", "0");
+
+        let current_date = NaiveDate::from_ymd_opt(2024, 5, 20).unwrap();
+        let args = args(["cal", "FY25Q1"]);
+
+        insta::assert_snapshot!(print(args, current_date), @r###"
+             July 2024            August 2024          September 2024   
+        Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su  Mo Tu We Th Fr Sa Su
+         1  2  3  4  5  6  7            1  2  3  4                     1
+         8  9 10 11 12 13 14   5  6  7  8  9 10 11   2  3  4  5  6  7  8
+        15 16 17 18 19 20 21  12 13 14 15 16 17 18   9 10 11 12 13 14 15
+        22 23 24 25 26 27 28  19 20 21 22 23 24 25  16 17 18 19 20 21 22
+        29 30 31              26 27 28 29 30 31     23 24 25 26 27 28 29
+                                                    30                  
+        "###);
+
+        std::env::remove_var("FORCE_COLOR");
+    }
+
     #[test]
     fn test_print_future_fiscal_quarter() {
         std::env::set_var("FORCE_COLOR", "0");
